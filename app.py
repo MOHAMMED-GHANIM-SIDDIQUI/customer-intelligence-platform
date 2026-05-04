@@ -192,13 +192,6 @@ html, body, [data-testid="stAppViewContainer"] {
     font-weight: 700;
 }
 
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-    margin: 1rem 0 1.2rem;
-}
-
 .kpi-card,
 .glass-card,
 .alert-card,
@@ -340,10 +333,36 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 [data-testid="stMetric"] {
-    padding: 0.95rem;
+    min-height: 132px;
+    padding: 1.05rem;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: rgba(15, 23, 42, 0.58);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(15, 23, 42, 0.52));
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow);
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-3px);
+    border-color: rgba(34, 211, 238, 0.34);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+}
+
+[data-testid="stMetricLabel"] {
+    color: #bfdbfe !important;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+[data-testid="stMetricValue"] {
+    color: #f8fafc !important;
+    font-weight: 900;
+}
+
+[data-testid="stMetricDelta"] {
+    font-weight: 800;
 }
 
 [data-testid="stDataFrame"],
@@ -393,7 +412,6 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 @media (max-width: 980px) {
-    .kpi-grid,
     .metric-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -403,7 +421,6 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 @media (max-width: 640px) {
-    .kpi-grid,
     .metric-row {
         grid-template-columns: 1fr;
     }
@@ -535,16 +552,14 @@ def trend_badge(current: float, benchmark: float, inverse: bool = False) -> tupl
     return css_class, f"{arrow} {abs(delta):.1%} vs full base"
 
 
-def render_kpi_card(label: str, value: str, trend: str, trend_class: str, tooltip: str) -> str:
-    """Return a single KPI card as HTML."""
+def metric_delta(current: float, benchmark: float, inverse: bool = False) -> tuple[str, str]:
+    """Return a Streamlit-safe KPI delta and color direction."""
 
-    return f"""
-    <div class="kpi-card" title="{tooltip}">
-        <div class="kpi-label"><span>{label}</span><span>ⓘ</span></div>
-        <div class="kpi-value">{value}</div>
-        <div class="kpi-trend {trend_class}">{trend}</div>
-    </div>
-    """
+    if pd.isna(current) or pd.isna(benchmark) or benchmark == 0:
+        return "Benchmark unavailable", "off"
+    delta = (current - benchmark) / abs(benchmark)
+    color = "inverse" if inverse else "normal"
+    return f"{delta:+.1%} vs full base", color
 
 
 def build_dashboard_table(result: PipelineResult) -> pd.DataFrame:
@@ -777,43 +792,39 @@ def render_kpis(dashboard: pd.DataFrame, filtered: pd.DataFrame) -> None:
     base_revenue_at_risk = dashboard["revenue_at_risk"].sum()
     base_customer_value = dashboard["total_spend"].mean()
 
-    churn_class, churn_trend = trend_badge(churn_rate, base_churn, inverse=True)
-    revenue_class, revenue_trend = trend_badge(revenue_at_risk, base_revenue_at_risk, inverse=True)
-    value_class, value_trend = trend_badge(avg_customer_value, base_customer_value)
-    customer_class = "trend-neutral"
-    customer_trend = f"→ {total_customers / max(len(dashboard), 1):.1%} of scored base"
+    churn_delta, churn_color = metric_delta(churn_rate, base_churn, inverse=True)
+    revenue_delta, revenue_color = metric_delta(revenue_at_risk, base_revenue_at_risk, inverse=True)
+    value_delta, value_color = metric_delta(avg_customer_value, base_customer_value)
+    selected_share = total_customers / max(len(dashboard), 1)
 
-    cards = [
-        render_kpi_card(
-            "Total Customers",
-            f"{total_customers:,}",
-            customer_trend,
-            customer_class,
-            "Number of customers included after the active filters.",
-        ),
-        render_kpi_card(
-            "Churn Rate",
-            format_percent(churn_rate),
-            churn_trend,
-            churn_class,
-            "Average predicted churn probability across selected customers.",
-        ),
-        render_kpi_card(
-            "Revenue at Risk",
-            format_currency(revenue_at_risk),
-            revenue_trend,
-            revenue_class,
-            "Predicted next-month revenue weighted by churn probability.",
-        ),
-        render_kpi_card(
-            "Avg Customer Value",
-            format_currency(avg_customer_value),
-            value_trend,
-            value_class,
-            "Average historical customer spend for the selected population.",
-        ),
-    ]
-    st.markdown(f'<div class="kpi-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(
+        "Total Customers",
+        f"{total_customers:,}",
+        f"{selected_share:.1%} selected",
+        help="Number of customers included after active filters.",
+    )
+    col2.metric(
+        "Churn Rate",
+        format_percent(churn_rate),
+        churn_delta,
+        delta_color=churn_color,
+        help="Average predicted churn probability across selected customers.",
+    )
+    col3.metric(
+        "Revenue at Risk",
+        format_currency(revenue_at_risk),
+        revenue_delta,
+        delta_color=revenue_color,
+        help="Predicted next-month revenue weighted by churn probability.",
+    )
+    col4.metric(
+        "Avg Customer Value",
+        format_currency(avg_customer_value),
+        value_delta,
+        delta_color=value_color,
+        help="Average historical customer spend for the selected population.",
+    )
 
 
 def render_empty_state(filtered: pd.DataFrame) -> bool:
@@ -831,19 +842,13 @@ def render_risk_distribution(filtered: pd.DataFrame) -> None:
     counts = filtered["risk_band"].value_counts().reindex(RISK_ORDER, fill_value=0)
     total = max(int(counts.sum()), 1)
     high_count = int(counts["high"])
-    cards = []
-    for risk in RISK_ORDER:
-        css = f"risk-{risk}"
-        cards.append(
-            f"""
-            <div class="mini-card">
-                <div class="label">{RISK_LABELS[risk]} Risk</div>
-                <div class="value {css}">{int(counts[risk]):,}</div>
-                <div class="kpi-trend">{counts[risk] / total:.1%} of selected customers</div>
-            </div>
-            """
+    cols = st.columns(3)
+    for col, risk in zip(cols, RISK_ORDER, strict=True):
+        col.metric(
+            f"{RISK_LABELS[risk]} Risk",
+            f"{int(counts[risk]):,}",
+            f"{counts[risk] / total:.1%} of selected customers",
         )
-    st.markdown(f'<div class="metric-row">{"".join(cards)}</div>', unsafe_allow_html=True)
     st.markdown(
         f'<div class="hero-status">High Risk Customers: {high_count:,} require priority review</div>',
         unsafe_allow_html=True,
