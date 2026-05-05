@@ -1,11 +1,14 @@
-"""Streamlit dashboard for the customer analytics case study."""
+﻿"""Streamlit dashboard for the customer analytics case study."""
 
 from __future__ import annotations
 
 import sys
+from html import escape
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -18,6 +21,14 @@ from customer_analytics.pipeline import PipelineResult, run_pipeline  # noqa: E4
 
 
 RISK_ORDER = ["low", "medium", "high"]
+RISK_COLORS = {
+    "low": "#22c55e",
+    "medium": "#f59e0b",
+    "high": "#ef4444",
+    "Low": "#22c55e",
+    "Medium": "#f59e0b",
+    "High": "#ef4444",
+}
 RISK_LABELS = {
     "low": "Low",
     "medium": "Medium",
@@ -141,8 +152,8 @@ html, body, [data-testid="stAppViewContainer"] {
 .hero {
     position: relative;
     overflow: hidden;
-    padding: 2.2rem 2.1rem 1.9rem;
-    margin-bottom: 1.15rem;
+    padding: 1.35rem 1.55rem 1.25rem;
+    margin-bottom: 0.65rem;
     border: 1px solid rgba(148, 163, 184, 0.22);
     border-radius: 8px;
     background:
@@ -162,7 +173,7 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .hero h1 {
     margin: 0;
-    font-size: clamp(2rem, 4vw, 4.4rem);
+    font-size: clamp(2rem, 3.4vw, 3.45rem);
     line-height: 1.02;
     font-weight: 900;
     letter-spacing: 0;
@@ -173,7 +184,7 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .hero p {
     max-width: 720px;
-    margin: 0.85rem 0 0;
+    margin: 0.55rem 0 0;
     color: #bfdbfe;
     font-size: 1.08rem;
 }
@@ -182,7 +193,7 @@ html, body, [data-testid="stAppViewContainer"] {
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
-    margin-top: 1.2rem;
+    margin-top: 0.8rem;
     padding: 0.54rem 0.78rem;
     border: 1px solid rgba(34, 211, 238, 0.28);
     border-radius: 999px;
@@ -246,6 +257,173 @@ html, body, [data-testid="stAppViewContainer"] {
 .trend-up { color: var(--green); }
 .trend-down { color: var(--red); }
 .trend-neutral { color: var(--cyan); }
+
+.decision-grid,
+.insight-grid,
+.top-insight-grid {
+    display: grid;
+    gap: 0.9rem;
+    margin: 0.9rem 0 1.2rem;
+}
+
+.decision-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.insight-grid,
+.top-insight-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.decision-kpi,
+.insight-banner,
+.top-insight-panel,
+.executive-alert {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.58));
+    box-shadow: var(--shadow);
+    animation: fadeUp 620ms ease both;
+}
+
+.decision-kpi {
+    min-height: 148px;
+    padding: 1rem;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.decision-kpi:hover,
+.insight-banner:hover,
+.top-insight-panel:hover {
+    transform: translateY(-4px);
+}
+
+.decision-kpi.good {
+    border-color: rgba(34, 197, 94, 0.36);
+    box-shadow: 0 24px 70px rgba(34, 197, 94, 0.10);
+}
+
+.decision-kpi.risk {
+    border-color: rgba(239, 68, 68, 0.38);
+    box-shadow: 0 24px 70px rgba(239, 68, 68, 0.12);
+}
+
+.decision-kpi.neutral {
+    border-color: rgba(34, 211, 238, 0.36);
+    box-shadow: 0 24px 70px rgba(34, 211, 238, 0.10);
+}
+
+.kpi-topline {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: #bfdbfe;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.kpi-icon {
+    width: 2.05rem;
+    height: 2.05rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.kpi-main-value {
+    margin-top: 0.7rem;
+    color: #f8fafc;
+    font-size: clamp(1.65rem, 2.5vw, 2.35rem);
+    line-height: 1;
+    font-weight: 900;
+}
+
+.kpi-delta {
+    margin-top: 0.72rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.kpi-delta.good { color: #86efac; }
+.kpi-delta.risk { color: #fca5a5; }
+.kpi-delta.neutral { color: #67e8f9; }
+
+.executive-alert {
+    padding: 1rem 1.1rem;
+    margin: 0.85rem 0 1.1rem;
+    border-color: rgba(239, 68, 68, 0.34);
+    background:
+        linear-gradient(90deg, rgba(127, 29, 29, 0.52), rgba(15, 23, 42, 0.76)),
+        radial-gradient(circle at 92% 10%, rgba(239, 68, 68, 0.30), transparent 36%);
+}
+
+.executive-alert strong {
+    color: #fee2e2;
+    font-size: 1rem;
+}
+
+.executive-alert span {
+    display: block;
+    color: #fecaca;
+    margin-top: 0.25rem;
+}
+
+.insight-banner,
+.top-insight-panel {
+    min-height: 128px;
+    padding: 1rem;
+    transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.insight-banner::before,
+.top-insight-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--cyan), var(--blue));
+}
+
+.insight-label {
+    color: #67e8f9;
+    font-size: 0.74rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.insight-value {
+    margin-top: 0.45rem;
+    color: #f8fafc;
+    font-size: 1.1rem;
+    font-weight: 850;
+    line-height: 1.32;
+}
+
+.insight-note {
+    margin-top: 0.45rem;
+    color: #bfdbfe;
+    font-size: 0.88rem;
+}
+
+.narrative-step {
+    margin: 0.35rem 0 0.85rem;
+    color: #93c5fd;
+    font-size: 0.82rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
 
 .section-title {
     display: flex;
@@ -333,8 +511,8 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 [data-testid="stMetric"] {
-    min-height: 132px;
-    padding: 1.05rem;
+    min-height: 108px;
+    padding: 0.9rem;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(15, 23, 42, 0.52));
@@ -392,13 +570,19 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 [data-baseweb="tab-list"] {
-    gap: 0.4rem;
+    width: 100%;
+    gap: 0.35rem;
     border-bottom: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 [data-baseweb="tab"] {
+    flex: 1 1 0;
+    min-width: max-content;
+    justify-content: center;
+    padding: 0.75rem 0.85rem;
     border-radius: 8px 8px 0 0;
     color: #cbd5e1;
+    font-weight: 800;
 }
 
 [aria-selected="true"] {
@@ -415,6 +599,11 @@ html, body, [data-testid="stAppViewContainer"] {
     .metric-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    .decision-grid,
+    .insight-grid,
+    .top-insight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .hero {
         padding: 1.45rem;
     }
@@ -422,6 +611,11 @@ html, body, [data-testid="stAppViewContainer"] {
 
 @media (max-width: 640px) {
     .metric-row {
+        grid-template-columns: 1fr;
+    }
+    .decision-grid,
+    .insight-grid,
+    .top-insight-grid {
         grid-template-columns: 1fr;
     }
     .block-container {
@@ -441,7 +635,7 @@ st.set_page_config(
 )
 
 
-@st.cache_resource(show_spinner="📊 Building customer intelligence pipeline...")
+@st.cache_resource(show_spinner="Building customer intelligence pipeline...")
 def load_pipeline_data() -> PipelineResult:
     """Run and cache the synthetic data, segmentation, churn, and spend models."""
 
@@ -462,6 +656,98 @@ def format_percent(value: float) -> str:
     return "N/A" if pd.isna(value) else f"{value:.1%}"
 
 
+def plotly_layout(fig: go.Figure, height: int = 390) -> go.Figure:
+    """Apply the dashboard visual system to Plotly charts."""
+
+    fig.update_layout(
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(2, 6, 23, 0.22)",
+        font={"color": "#dbeafe"},
+        margin={"l": 18, "r": 18, "t": 48, "b": 20},
+        legend_title_text="",
+        hoverlabel={"bgcolor": "#020617", "font_color": "#f8fafc", "bordercolor": "#334155"},
+    )
+    fig.update_xaxes(gridcolor="rgba(148, 163, 184, 0.12)", zerolinecolor="rgba(148, 163, 184, 0.18)")
+    fig.update_yaxes(gridcolor="rgba(148, 163, 184, 0.12)", zerolinecolor="rgba(148, 163, 184, 0.18)")
+    return fig
+
+
+def risk_bar_chart(data: pd.DataFrame, x: str, y: str, title: str, color: str = "risk_band") -> go.Figure:
+    """Render a risk-colored bar chart with consistent enterprise styling."""
+
+    fig = px.bar(
+        data,
+        x=x,
+        y=y,
+        color=color if color in data.columns else None,
+        color_discrete_map=RISK_COLORS,
+        title=title,
+        text_auto=True,
+        hover_data=[column for column in data.columns if column not in {x, y}],
+    )
+    fig.update_traces(marker_line_width=0, textposition="outside", cliponaxis=False)
+    return plotly_layout(fig)
+
+
+def segment_bar_chart(data: pd.DataFrame, x: str, y: str, title: str) -> go.Figure:
+    fig = px.bar(
+        data,
+        x=x,
+        y=y,
+        color=y,
+        color_continuous_scale=["#22d3ee", "#3b82f6", "#ef4444"],
+        title=title,
+        hover_data=[column for column in data.columns if column not in {x, y}],
+    )
+    fig.update_traces(marker_line_width=0)
+    fig.update_layout(coloraxis_showscale=False)
+    return plotly_layout(fig)
+
+
+def render_decision_kpi_grid(cards: list[dict[str, str]]) -> None:
+    """Render KPI cards with native Streamlit metrics.
+
+    Native metrics avoid raw HTML leakage in Streamlit's markdown renderer while
+    still inheriting the premium styling from the global CSS metric selectors.
+    """
+
+    columns = st.columns(len(cards))
+    for column, card in zip(columns, cards, strict=True):
+        tone = card.get("tone", "neutral")
+        delta_color = "inverse" if tone == "risk" else "normal"
+        if tone == "neutral":
+            delta_color = "off"
+        column.metric(
+            card["label"],
+            card["value"],
+            card["delta"],
+            delta_color=delta_color,
+        )
+
+
+def render_insight_grid(insights: list[dict[str, str]]) -> None:
+    """Render insight cards with native Streamlit containers."""
+
+    columns = st.columns(min(len(insights), 3))
+    for column, item in zip(columns, insights, strict=False):
+        with column.container(border=True):
+            st.caption(str(item["label"]).upper())
+            st.markdown(f"**{item['value']}**")
+            st.write(item["note"])
+
+
+def render_top_insights_panel(insights: list[dict[str, str]]) -> None:
+    """Render top insights with native Streamlit containers."""
+
+    columns = st.columns(min(len(insights), 3))
+    for column, item in zip(columns, insights, strict=False):
+        with column.container(border=True):
+            st.caption(str(item["label"]).upper())
+            st.markdown(f"**{item['value']}**")
+            st.write(item["note"])
+
+
 def inject_global_css() -> None:
     """Apply the enterprise dashboard visual system."""
 
@@ -475,9 +761,9 @@ def render_hero() -> None:
         """
         <section class="hero">
             <div class="section-eyebrow">Enterprise Analytics Suite</div>
-            <h1>📊 Customer Intelligence Platform</h1>
+            <h1>Customer Intelligence Platform</h1>
             <p>Predict churn, optimize retention, maximize revenue</p>
-            <div class="hero-status">● Live intelligence workspace · Segments · Churn · Revenue · Actions</div>
+            <div class="hero-status">Live intelligence workspace | Segments | Churn | Revenue | Actions</div>
         </section>
         """,
         unsafe_allow_html=True,
@@ -488,7 +774,7 @@ def render_footer() -> None:
     """Render a minimal product footer."""
 
     st.markdown(
-        '<div class="footer">Customer Intelligence Platform • Built for Data-Driven Decisions</div>',
+        '<div class="footer">Customer Intelligence Platform | Built for Data-Driven Decisions</div>',
         unsafe_allow_html=True,
     )
 
@@ -501,7 +787,7 @@ def render_section_title(icon: str, title: str, subtitle: str = "", badge: str =
         f"""
         <div class="section-title">
             <div>
-                <div class="section-eyebrow">{icon} Insight Module</div>
+                <div class="section-eyebrow">Insight Module</div>
                 <h2>{title}</h2>
                 <p>{subtitle}</p>
             </div>
@@ -518,7 +804,7 @@ def render_alert(message: str) -> None:
     st.markdown(
         f"""
         <div class="alert-card">
-            <strong>❌ Data or pipeline error</strong><br />
+            <strong>Data or pipeline error</strong><br />
             {message}
         </div>
         """,
@@ -527,28 +813,28 @@ def render_alert(message: str) -> None:
 
 
 def render_card_start() -> None:
-    """Open a styled card wrapper for native Streamlit components."""
+    """No-op retained for layout compatibility.
 
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    Streamlit does not reliably wrap native components inside arbitrary HTML divs.
+    Leaving this as a no-op prevents empty glass tiles from appearing in the UI.
+    """
 
 
 def render_card_end() -> None:
-    """Close a styled card wrapper."""
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    """No-op retained for layout compatibility."""
 
 
 def trend_badge(current: float, benchmark: float, inverse: bool = False) -> tuple[str, str]:
     """Return a compact trend indicator for KPI cards."""
 
     if pd.isna(current) or pd.isna(benchmark) or benchmark == 0:
-        return "trend-neutral", "→ benchmark unavailable"
+        return "trend-neutral", "â†’ benchmark unavailable"
     delta = (current - benchmark) / abs(benchmark)
     is_positive = delta >= 0
     if inverse:
         is_positive = not is_positive
     css_class = "trend-up" if is_positive else "trend-down"
-    arrow = "↑" if delta >= 0 else "↓"
+    arrow = "â†‘" if delta >= 0 else "â†“"
     return css_class, f"{arrow} {abs(delta):.1%} vs full base"
 
 
@@ -560,6 +846,114 @@ def metric_delta(current: float, benchmark: float, inverse: bool = False) -> tup
     delta = (current - benchmark) / abs(benchmark)
     color = "inverse" if inverse else "normal"
     return f"{delta:+.1%} vs full base", color
+
+
+def kpi_delta_card(current: float, benchmark: float, inverse: bool = False) -> tuple[str, str, str]:
+    """Return card delta text, visual tone, and arrow for custom KPIs."""
+
+    if pd.isna(current) or pd.isna(benchmark) or benchmark == 0:
+        return "Benchmark unavailable", "neutral", "â€¢"
+    delta = (current - benchmark) / abs(benchmark)
+    is_good = delta < 0 if inverse else delta >= 0
+    tone = "good" if is_good else "risk"
+    arrow = "â†‘" if delta >= 0 else "â†“"
+    return f"{delta:+.1%} vs full base", tone, arrow
+
+
+def build_executive_insights(dashboard: pd.DataFrame, filtered: pd.DataFrame) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Create business-readable insight cards from existing model outputs."""
+
+    if filtered.empty:
+        empty = [{"label": "No active selection", "value": "Filters removed all customers", "note": "Adjust filters to restore insight generation."}]
+        return empty, empty
+
+    total_revenue_at_risk = filtered["revenue_at_risk"].sum()
+    total_forecast = filtered["predicted_next_month_spend"].sum()
+    exposure_share = total_revenue_at_risk / max(total_forecast, 1)
+
+    high_risk = filtered[filtered["risk_band"] == "high"]
+    high_risk_exposure = high_risk["revenue_at_risk"].sum()
+    high_risk_share = high_risk_exposure / max(total_revenue_at_risk, 1)
+
+    segment_risk = (
+        filtered.groupby("segment", as_index=False)
+        .agg(
+            avg_churn=("churn_probability", "mean"),
+            revenue_at_risk=("revenue_at_risk", "sum"),
+            customers=("customer_id", "count"),
+        )
+        .sort_values(["avg_churn", "revenue_at_risk"], ascending=False)
+    )
+    top_risk_segment = segment_risk.iloc[0] if not segment_risk.empty else None
+    top_revenue_segment = segment_risk.sort_values("revenue_at_risk", ascending=False).iloc[0] if not segment_risk.empty else None
+
+    action_mix = (
+        filtered.groupby("recommended_action", as_index=False)
+        .agg(customers=("customer_id", "count"), revenue_at_risk=("revenue_at_risk", "sum"))
+        .sort_values(["customers", "revenue_at_risk"], ascending=False)
+    )
+    common_action = action_mix.iloc[0] if not action_mix.empty else None
+
+    recent_risk = filtered[filtered["recency_days"] <= filtered["recency_days"].median()]["churn_probability"].mean()
+    base_churn = dashboard["churn_probability"].mean()
+
+    insights = [
+        {
+            "label": "Revenue Exposure",
+            "value": f"High-risk customers contribute {high_risk_share:.0%} of selected revenue at risk.",
+            "note": f"{len(high_risk):,} high-risk customers expose {format_currency(high_risk_exposure)}.",
+        },
+        {
+            "label": "Segment Signal",
+            "value": f"Segment {int(top_risk_segment['segment']) if top_risk_segment is not None else 'N/A'} has the highest churn probability.",
+            "note": f"Average churn is {format_percent(top_risk_segment['avg_churn']) if top_risk_segment is not None else 'N/A'}.",
+        },
+        {
+            "label": "Behavior Pattern",
+            "value": f"Recent customers show {format_percent(recent_risk)} churn versus {format_percent(base_churn)} full-base churn.",
+            "note": "Use this to distinguish true retention risk from normal activity recency.",
+        },
+    ]
+
+    top_panel = [
+        {
+            "label": "Top Risky Segment",
+            "value": f"Segment {int(top_risk_segment['segment']) if top_risk_segment is not None else 'N/A'}",
+            "note": f"{int(top_risk_segment['customers']) if top_risk_segment is not None else 0:,} customers in current view.",
+        },
+        {
+            "label": "Top Revenue Segment",
+            "value": f"Segment {int(top_revenue_segment['segment']) if top_revenue_segment is not None else 'N/A'}",
+            "note": f"{format_currency(top_revenue_segment['revenue_at_risk']) if top_revenue_segment is not None else 'N/A'} exposed.",
+        },
+        {
+            "label": "Most Common Action",
+            "value": str(common_action["recommended_action"]) if common_action is not None else "N/A",
+            "note": f"{int(common_action['customers']) if common_action is not None else 0:,} customers affected.",
+        },
+    ]
+
+    insights[0]["note"] += f" Total exposure is {exposure_share:.0%} of forecast revenue."
+    return insights, top_panel
+
+
+def render_executive_alert(filtered: pd.DataFrame) -> None:
+    """Render the attention-grabbing executive exposure banner."""
+
+    if filtered.empty:
+        return
+    high_risk = filtered[filtered["risk_band"] == "high"]
+    high_risk_share = len(high_risk) / max(len(filtered), 1)
+    exposure = high_risk["revenue_at_risk"].sum()
+    st.markdown(
+        f"""
+        <div class="executive-alert">
+            <strong>Critical exposure: {high_risk_share:.0%} of selected customers are high-risk, contributing {format_currency(exposure)} in revenue exposure.</strong>
+            <span>Prioritize the highest-value accounts before reviewing lower-risk cohorts.</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def build_dashboard_table(result: PipelineResult) -> pd.DataFrame:
@@ -602,11 +996,11 @@ def render_business_rules() -> tuple[float, float, dict[str, str]]:
             <div class="eyebrow">Control Panel</div>
             <div class="title">Customer Intelligence</div>
         </div>
-        <div class="control-label">⚙️ Business Rules</div>
+        <div class="control-label">Business Rules</div>
         """,
         unsafe_allow_html=True,
     )
-    if st.sidebar.button("✨ Run Demo Pipeline", use_container_width=True):
+    if st.sidebar.button("Run Demo Pipeline", width="stretch"):
         load_pipeline_data.clear()
         st.rerun()
 
@@ -724,25 +1118,49 @@ def apply_sidebar_filters(dashboard: pd.DataFrame) -> pd.DataFrame:
 
     st.sidebar.markdown(
         """
-        <div class="control-label">📂 Data Status</div>
+        <div class="control-label">Data Status</div>
         <div class="mini-card">
             <div class="label">Pipeline</div>
             <div class="value">Loaded</div>
         </div>
-        <div class="control-label">📊 Filters</div>
+        <div class="control-label">Filters</div>
         """,
         unsafe_allow_html=True,
     )
 
+    quick_view = st.sidebar.selectbox(
+        "Quick View Mode",
+        ["All Customers", "High Risk Only", "High Value Customers", "Retention Priority"],
+        help="Applies a decision-ready filter preset before manual filters.",
+    )
+
+    if quick_view == "High Risk Only":
+        segment_defaults = sorted(dashboard["segment"].unique())
+        risk_defaults = ["high"]
+        min_spend_default = float(dashboard["predicted_next_month_spend"].min())
+    elif quick_view == "High Value Customers":
+        segment_defaults = sorted(dashboard["segment"].unique())
+        risk_defaults = RISK_ORDER
+        min_spend_default = float(dashboard["predicted_next_month_spend"].quantile(0.75))
+    elif quick_view == "Retention Priority":
+        priority_pool = dashboard[dashboard["action_priority"] <= 2]
+        segment_defaults = sorted(priority_pool["segment"].unique()) if not priority_pool.empty else sorted(dashboard["segment"].unique())
+        risk_defaults = ["medium", "high"]
+        min_spend_default = float(dashboard["predicted_next_month_spend"].min())
+    else:
+        segment_defaults = sorted(dashboard["segment"].unique())
+        risk_defaults = RISK_ORDER
+        min_spend_default = float(dashboard["predicted_next_month_spend"].min())
+
     selected_segments = st.sidebar.multiselect(
         "Segments",
         options=sorted(dashboard["segment"].unique()),
-        default=sorted(dashboard["segment"].unique()),
+        default=segment_defaults,
     )
     selected_risk_bands = st.sidebar.multiselect(
         "Risk bands",
         options=RISK_ORDER,
-        default=RISK_ORDER,
+        default=risk_defaults,
         format_func=lambda value: RISK_LABELS[value],
     )
     selected_countries = st.sidebar.multiselect(
@@ -760,13 +1178,13 @@ def apply_sidebar_filters(dashboard: pd.DataFrame) -> pd.DataFrame:
         "Predicted spend range",
         min_value=min_spend,
         max_value=max_spend,
-        value=(min_spend, max_spend),
+        value=(min_spend_default, max_spend),
         step=10.0,
     )
 
     if not selected_segments or not selected_risk_bands or not selected_countries:
         st.sidebar.markdown(
-            '<div class="alert-card">❌ Select at least one value in each filter.</div>',
+            '<div class="alert-card">Select at least one value in each filter.</div>',
             unsafe_allow_html=True,
         )
         return dashboard.iloc[0:0]
@@ -792,38 +1210,45 @@ def render_kpis(dashboard: pd.DataFrame, filtered: pd.DataFrame) -> None:
     base_revenue_at_risk = dashboard["revenue_at_risk"].sum()
     base_customer_value = dashboard["total_spend"].mean()
 
-    churn_delta, churn_color = metric_delta(churn_rate, base_churn, inverse=True)
-    revenue_delta, revenue_color = metric_delta(revenue_at_risk, base_revenue_at_risk, inverse=True)
-    value_delta, value_color = metric_delta(avg_customer_value, base_customer_value)
+    churn_delta, churn_tone, churn_arrow = kpi_delta_card(churn_rate, base_churn, inverse=True)
+    revenue_delta, revenue_tone, revenue_arrow = kpi_delta_card(revenue_at_risk, base_revenue_at_risk, inverse=True)
+    value_delta, value_tone, value_arrow = kpi_delta_card(avg_customer_value, base_customer_value)
     selected_share = total_customers / max(len(dashboard), 1)
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(
-        "Total Customers",
-        f"{total_customers:,}",
-        f"{selected_share:.1%} selected",
-        help="Number of customers included after active filters.",
-    )
-    col2.metric(
-        "Churn Rate",
-        format_percent(churn_rate),
-        churn_delta,
-        delta_color=churn_color,
-        help="Average predicted churn probability across selected customers.",
-    )
-    col3.metric(
-        "Revenue at Risk",
-        format_currency(revenue_at_risk),
-        revenue_delta,
-        delta_color=revenue_color,
-        help="Predicted next-month revenue weighted by churn probability.",
-    )
-    col4.metric(
-        "Avg Customer Value",
-        format_currency(avg_customer_value),
-        value_delta,
-        delta_color=value_color,
-        help="Average historical customer spend for the selected population.",
+    render_decision_kpi_grid(
+        [
+            {
+                "icon": "ðŸ‘¥",
+                "label": "Total Customers",
+                "value": f"{total_customers:,}",
+                "delta": f"{selected_share:.1%} selected",
+                "tone": "neutral",
+                "arrow": "â€¢",
+            },
+            {
+                "icon": "âš ",
+                "label": "Churn Rate",
+                "value": format_percent(churn_rate),
+                "delta": churn_delta,
+                "tone": churn_tone,
+                "arrow": churn_arrow,
+            },
+            {
+                "icon": "ðŸ’¸",
+                "label": "Revenue at Risk",
+                "value": format_currency(revenue_at_risk),
+                "delta": revenue_delta,
+                "tone": revenue_tone,
+                "arrow": revenue_arrow,
+            },
+            {
+                "icon": "ðŸ’Ž",
+                "label": "Avg Customer Value",
+                "value": format_currency(avg_customer_value),
+                "delta": value_delta,
+                "tone": value_tone,
+                "arrow": value_arrow,
+            },
+        ]
     )
 
 
@@ -842,13 +1267,19 @@ def render_risk_distribution(filtered: pd.DataFrame) -> None:
     counts = filtered["risk_band"].value_counts().reindex(RISK_ORDER, fill_value=0)
     total = max(int(counts.sum()), 1)
     high_count = int(counts["high"])
-    cols = st.columns(3)
-    for col, risk in zip(cols, RISK_ORDER, strict=True):
-        col.metric(
-            f"{RISK_LABELS[risk]} Risk",
-            f"{int(counts[risk]):,}",
-            f"{counts[risk] / total:.1%} of selected customers",
-        )
+    render_decision_kpi_grid(
+        [
+            {
+                "icon": {"low": "âœ“", "medium": "!", "high": "âš "}[risk],
+                "label": f"{RISK_LABELS[risk]} Risk",
+                "value": f"{int(counts[risk]):,}",
+                "delta": f"{counts[risk] / total:.1%} of selected customers",
+                "tone": {"low": "good", "medium": "neutral", "high": "risk"}[risk],
+                "arrow": {"low": "â†‘", "medium": "â€¢", "high": "â†“"}[risk],
+            }
+            for risk in RISK_ORDER
+        ]
+    )
     st.markdown(
         f'<div class="hero-status">High Risk Customers: {high_count:,} require priority review</div>',
         unsafe_allow_html=True,
@@ -899,7 +1330,7 @@ def render_customer_intelligence_table(customers: pd.DataFrame, limit: int = 150
             "revenue_at_risk": "${:,.2f}",
         }
     )
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(styled, width="stretch", hide_index=True)
 
 
 def render_action_insights(filtered: pd.DataFrame) -> None:
@@ -914,7 +1345,7 @@ def render_action_insights(filtered: pd.DataFrame) -> None:
     action_mix["priority"] = action_mix["risk_band"].map(priority_lookup)
     st.dataframe(
         action_mix[["priority", "recommended_action", "customers", "revenue_at_risk"]],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "priority": "Priority",
@@ -928,12 +1359,22 @@ def render_action_insights(filtered: pd.DataFrame) -> None:
 def render_executive_summary(dashboard: pd.DataFrame, filtered: pd.DataFrame) -> None:
     """Render the primary business overview."""
 
-    render_section_title("📊", "Executive KPI Strip", "A concise readout of customer health and revenue exposure.")
+    render_section_title("ðŸ“Š", "Executive KPI Strip", "WHAT: customer health, churn risk, and revenue exposure.")
+    st.markdown('<div class="narrative-step">1. WHAT changed</div>', unsafe_allow_html=True)
     render_kpis(dashboard, filtered)
     if render_empty_state(filtered):
         return
 
-    render_section_title("📈", "Risk Distribution", "Low, medium, and high-risk customer composition.", "Live risk mix")
+    render_executive_alert(filtered)
+    insights, top_panel = build_executive_insights(dashboard, filtered)
+    render_section_title("ðŸ§ ", "Key Insights", "WHY: AI-style business readouts generated from model outputs.", "Decision layer")
+    st.markdown('<div class="narrative-step">2. WHY it matters</div>', unsafe_allow_html=True)
+    render_insight_grid(insights)
+    render_section_title("ðŸ§¾", "Top Insights Panel", "The fastest read on segment risk, revenue concentration, and recommended action.")
+    render_top_insights_panel(top_panel)
+
+    render_section_title("ðŸ“ˆ", "Risk Distribution", "Low, medium, and high-risk customer composition.", "Live risk mix")
+    st.markdown('<div class="narrative-step">3. WHERE risk is concentrated</div>', unsafe_allow_html=True)
     render_card_start()
     render_risk_distribution(filtered)
     risk_mix = (
@@ -942,10 +1383,10 @@ def render_executive_summary(dashboard: pd.DataFrame, filtered: pd.DataFrame) ->
     )
     risk_mix["risk_band"] = pd.Categorical(risk_mix["risk_band"], categories=RISK_ORDER, ordered=True)
     risk_mix = risk_mix.sort_values("risk_band")
-    st.bar_chart(risk_mix, x="risk_band", y="customers", use_container_width=True)
+    st.plotly_chart(risk_bar_chart(risk_mix, "risk_band", "customers", "Customers by risk band"), width="stretch")
     render_card_end()
 
-    render_section_title("💰", "Revenue at Risk Breakdown", "Prioritize the customers and segments with the most exposed revenue.")
+    render_section_title("ðŸ’°", "Revenue at Risk Breakdown", "Prioritize the customers and segments with the most exposed revenue.")
     left, right = st.columns([1, 1])
     with left:
         render_card_start()
@@ -960,56 +1401,59 @@ def render_executive_summary(dashboard: pd.DataFrame, filtered: pd.DataFrame) ->
             )
             .sort_values("revenue_at_risk", ascending=False)
         )
-        st.bar_chart(segment_risk, x="segment", y="revenue_at_risk", use_container_width=True)
+        st.plotly_chart(segment_bar_chart(segment_risk, "segment", "revenue_at_risk", "Revenue at risk by segment"), width="stretch")
         render_card_end()
     with right:
         render_card_start()
         st.markdown("#### Top 10 risky customers")
-        top_risky = filtered.sort_values("revenue_at_risk", ascending=False).head(10)
+        top_risky = filtered.sort_values("revenue_at_risk", ascending=False).head(10).copy()
+        top_risky["churn_probability_pct"] = top_risky["churn_probability"] * 100
         st.dataframe(
             top_risky[
                 [
                     "customer_id",
                     "risk_label",
-                    "churn_probability",
+                    "churn_probability_pct",
                     "predicted_next_month_spend",
                     "revenue_at_risk",
                 ]
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "customer_id": "Customer ID",
                 "risk_label": "Risk",
-                "churn_probability": st.column_config.NumberColumn("Churn probability", format="%.1%"),
+                "churn_probability_pct": st.column_config.NumberColumn("Churn probability", format="%.1f%%"),
                 "predicted_next_month_spend": st.column_config.NumberColumn("Predicted spend", format="$%.0f"),
                 "revenue_at_risk": st.column_config.NumberColumn("Revenue at risk", format="$%.0f"),
             },
         )
         render_card_end()
 
-    render_section_title("🧬", "Customer Segments", "Segment economics and revenue exposure for targeted plays.")
+    render_section_title("ðŸ§¬", "Customer Segments", "Segment economics and revenue exposure for targeted plays.")
     render_card_start()
+    segment_risk["avg_churn_probability_pct"] = segment_risk["avg_churn_probability"] * 100
     st.dataframe(
-        segment_risk,
-        use_container_width=True,
+        segment_risk.drop(columns=["avg_churn_probability"]),
+        width="stretch",
         hide_index=True,
         column_config={
             "segment": "Segment",
             "customers": st.column_config.NumberColumn("Customers", format="%d"),
             "forecast_revenue": st.column_config.NumberColumn("Forecast revenue", format="$%.0f"),
             "revenue_at_risk": st.column_config.NumberColumn("Revenue at risk", format="$%.0f"),
-            "avg_churn_probability": st.column_config.NumberColumn("Avg churn", format="%.1%"),
+            "avg_churn_probability_pct": st.column_config.NumberColumn("Avg churn", format="%.1f%%"),
         },
     )
     render_card_end()
 
-    render_section_title("🎯", "Action Recommendations", "CRM-ready retention actions grouped by risk and business priority.")
+    render_section_title("ðŸŽ¯", "Action Recommendations", "CRM-ready retention actions grouped by risk and business priority.")
+    st.markdown('<div class="narrative-step">4. WHAT TO DO next</div>', unsafe_allow_html=True)
     render_card_start()
     render_action_insights(filtered)
     render_card_end()
 
-    render_section_title("📋", "Customer Intelligence Table", "Top customers ranked by risk, revenue exposure, and action priority.")
+    render_section_title("ðŸ“‹", "Customer Intelligence Table", "Top customers ranked by risk, revenue exposure, and action priority.")
     render_card_start()
     render_customer_intelligence_table(filtered)
     render_card_end()
@@ -1021,7 +1465,7 @@ def render_segments(result: PipelineResult, filtered: pd.DataFrame) -> None:
     if render_empty_state(filtered):
         return
 
-    render_section_title("🧬", "Customer Segments", "Behavioral clusters for targeted growth and retention strategy.")
+    render_section_title("ðŸ§¬", "Customer Segments", "Behavioral clusters for targeted growth and retention strategy.")
     profile = result.segmentation.segment_profile.reset_index()
     segment_counts = filtered.groupby("segment").size().rename("filtered_customers")
     profile = profile.merge(segment_counts, on="segment", how="left").fillna({"filtered_customers": 0})
@@ -1030,7 +1474,7 @@ def render_segments(result: PipelineResult, filtered: pd.DataFrame) -> None:
     st.markdown("#### Segment profile")
     st.dataframe(
         profile,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={"filtered_customers": st.column_config.NumberColumn("Customers in filter", format="%d")},
     )
@@ -1045,14 +1489,17 @@ def render_segments(result: PipelineResult, filtered: pd.DataFrame) -> None:
             on="customer_id",
             how="inner",
         )
-        st.scatter_chart(
+        pca_fig = px.scatter(
             pca_data,
             x="pca_1",
             y="pca_2",
-            color="segment",
+            color="risk_band",
             size="churn_probability",
-            use_container_width=True,
+            color_discrete_map=RISK_COLORS,
+            hover_data=["customer_id", "segment", "churn_probability"],
+            title="Segment map by risk band",
         )
+        st.plotly_chart(plotly_layout(pca_fig, height=430), width="stretch")
         st.caption(
             f"PCA is used for visualization only and explains "
             f"{result.segmentation.explained_variance_2d:.1%} of scaled feature variance."
@@ -1071,14 +1518,15 @@ def render_segments(result: PipelineResult, filtered: pd.DataFrame) -> None:
             )
             .sort_values("avg_predicted_spend", ascending=False)
         )
+        segment_economics["avg_churn_probability_pct"] = segment_economics["avg_churn_probability"] * 100
         st.dataframe(
-            segment_economics,
-            use_container_width=True,
+            segment_economics.drop(columns=["avg_churn_probability"]),
+            width="stretch",
             hide_index=True,
             column_config={
                 "avg_total_spend": st.column_config.NumberColumn("Avg historical spend", format="$%.0f"),
                 "avg_predicted_spend": st.column_config.NumberColumn("Avg forecast spend", format="$%.0f"),
-                "avg_churn_probability": st.column_config.NumberColumn("Avg churn", format="%.1%"),
+                "avg_churn_probability_pct": st.column_config.NumberColumn("Avg churn", format="%.1f%%"),
             },
         )
         render_card_end()
@@ -1090,7 +1538,7 @@ def render_retention(filtered: pd.DataFrame) -> None:
     if render_empty_state(filtered):
         return
 
-    render_section_title("🎯", "Retention Command Center", "Identify who needs attention and which action should happen next.")
+    render_section_title("ðŸŽ¯", "Retention Command Center", "Identify who needs attention and which action should happen next.")
     render_card_start()
     st.markdown("#### Risk mix")
     render_risk_distribution(filtered)
@@ -1104,10 +1552,10 @@ def render_retention(filtered: pd.DataFrame) -> None:
     )
     risk_mix["risk_band"] = pd.Categorical(risk_mix["risk_band"], categories=RISK_ORDER, ordered=True)
     risk_mix = risk_mix.sort_values("risk_band")
-    st.bar_chart(risk_mix, x="risk_band", y="customers", use_container_width=True)
+    st.plotly_chart(risk_bar_chart(risk_mix, "risk_band", "customers", "Retention risk mix"), width="stretch")
     render_card_end()
 
-    render_section_title("📋", "Retention Priority Queue", "Top customers sorted by action priority and exposed revenue.")
+    render_section_title("ðŸ“‹", "Retention Priority Queue", "Top customers sorted by action priority and exposed revenue.")
     render_card_start()
     queue_columns = [
         "customer_id",
@@ -1127,7 +1575,7 @@ def render_retention(filtered: pd.DataFrame) -> None:
     queue_columns[queue_columns.index("churn_probability")] = "churn_probability_pct"
     st.dataframe(
         priority_queue[queue_columns].head(250),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "customer_id": "Customer ID",
@@ -1157,7 +1605,7 @@ def render_forecast(filtered: pd.DataFrame) -> None:
     if render_empty_state(filtered):
         return
 
-    render_section_title("💰", "Revenue Forecast", "Explore predicted next-month spend and business drivers.")
+    render_section_title("ðŸ’°", "Revenue Forecast", "Explore predicted next-month spend and business drivers.")
     left, right = st.columns(2)
     with left:
         render_card_start()
@@ -1167,11 +1615,9 @@ def render_forecast(filtered: pd.DataFrame) -> None:
             .sum()
             .sort_values("predicted_next_month_spend", ascending=False)
         )
-        st.bar_chart(
-            forecast_by_segment,
-            x="segment",
-            y="predicted_next_month_spend",
-            use_container_width=True,
+        st.plotly_chart(
+            segment_bar_chart(forecast_by_segment, "segment", "predicted_next_month_spend", "Forecast revenue by segment"),
+            width="stretch",
         )
         render_card_end()
 
@@ -1183,7 +1629,7 @@ def render_forecast(filtered: pd.DataFrame) -> None:
         ].corr(numeric_only=True)[["predicted_next_month_spend"]].drop("predicted_next_month_spend")
         st.dataframe(
             driver_view.rename(columns={"predicted_next_month_spend": "correlation"}),
-            use_container_width=True,
+            width="stretch",
             column_config={"correlation": st.column_config.NumberColumn("Correlation", format="%.2f")},
         )
         render_card_end()
@@ -1194,14 +1640,23 @@ def render_forecast(filtered: pd.DataFrame) -> None:
     spend_distribution = spend_bins.value_counts().sort_index().reset_index()
     spend_distribution.columns = ["predicted_spend_band", "customers"]
     spend_distribution["predicted_spend_band"] = spend_distribution["predicted_spend_band"].astype(str)
-    st.bar_chart(spend_distribution, x="predicted_spend_band", y="customers", use_container_width=True)
+    spend_fig = px.bar(
+        spend_distribution,
+        x="predicted_spend_band",
+        y="customers",
+        title="Customer spend distribution",
+        color="customers",
+        color_continuous_scale=["#22d3ee", "#3b82f6"],
+    )
+    spend_fig.update_layout(coloraxis_showscale=False)
+    st.plotly_chart(plotly_layout(spend_fig, height=360), width="stretch")
     render_card_end()
 
 
 def render_customer_explorer(result: PipelineResult, dashboard: pd.DataFrame, filtered: pd.DataFrame) -> None:
     """Render customer table and single-customer lookup."""
 
-    render_section_title("📋", "Customer Intelligence Table", "Search, sort, and inspect customer-level predictions.")
+    render_section_title("ðŸ“‹", "Customer Intelligence Table", "Search, sort, and inspect customer-level predictions.")
     render_card_start()
     table_columns = [
         "customer_id",
@@ -1220,7 +1675,7 @@ def render_customer_explorer(result: PipelineResult, dashboard: pd.DataFrame, fi
     table_columns[table_columns.index("churn_probability")] = "churn_probability_pct"
     st.dataframe(
         source.sort_values("revenue_at_risk", ascending=False)[table_columns],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "customer_id": "Customer ID",
@@ -1245,7 +1700,7 @@ def render_customer_explorer(result: PipelineResult, dashboard: pd.DataFrame, fi
     )
     render_card_end()
 
-    render_section_title("🔎", "Customer Lookup", "Drill into an individual customer profile and recommended action.")
+    render_section_title("ðŸ”Ž", "Customer Lookup", "Drill into an individual customer profile and recommended action.")
     render_card_start()
     customer_id = st.number_input(
         "Customer ID",
@@ -1279,7 +1734,7 @@ def render_customer_explorer(result: PipelineResult, dashboard: pd.DataFrame, fi
             }
         ]
     )
-    st.dataframe(detail, use_container_width=True, hide_index=True)
+    st.dataframe(detail, width="stretch", hide_index=True)
     render_card_end()
 
 
@@ -1291,7 +1746,7 @@ def render_manual_scorer(
 ) -> None:
     """Render a single-customer what-if scorer."""
 
-    render_section_title("✨", "Single Customer Scorer", "Tune customer inputs and get an immediate retention recommendation.")
+    render_section_title("âœ¨", "Single Customer Scorer", "Tune customer inputs and get an immediate retention recommendation.")
     render_card_start()
     with st.form("manual_customer_scorer"):
         col1, col2, col3 = st.columns(3)
@@ -1315,7 +1770,7 @@ def render_manual_scorer(
             )
             spend_per_visit = st.number_input("Spend per visit", min_value=0.0, value=100.0, step=10.0)
 
-        submitted = st.form_submit_button("Score customer", use_container_width=True)
+        submitted = st.form_submit_button("Score customer", width="stretch")
 
     if not submitted:
         render_card_end()
@@ -1402,7 +1857,7 @@ def render_upload_scorer(
 ) -> None:
     """Render CSV upload scoring for user-provided customer data."""
 
-    render_section_title("📂", "Bulk CSV Scorer", "Upload company customer data, map columns, score, and export CRM-ready actions.")
+    render_section_title("ðŸ“‚", "Bulk CSV Scorer", "Upload company customer data, map columns, score, and export CRM-ready actions.")
     render_card_start()
     template = pd.DataFrame(
         [
@@ -1427,7 +1882,7 @@ def render_upload_scorer(
         data=template.to_csv(index=False),
         file_name="customer_scoring_template.csv",
         mime="text/csv",
-        use_container_width=True,
+        width="stretch",
     )
 
     uploaded_file = st.file_uploader("Upload customer feature CSV", type=["csv"])
@@ -1462,7 +1917,7 @@ def render_upload_scorer(
     render_kpis(scored_display, scored_display)
     st.dataframe(
         scored_display[display_columns].sort_values("revenue_at_risk", ascending=False),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "customer_id": "Customer ID",
@@ -1484,7 +1939,7 @@ def render_upload_scorer(
         data=scored.to_csv(index=False),
         file_name="customer_scored_results.csv",
         mime="text/csv",
-        use_container_width=True,
+        width="stretch",
     )
     render_card_end()
 
@@ -1507,9 +1962,9 @@ def render_data_contract() -> None:
             {"field": "order_value_std", "meaning": "Variation in order amounts", "typical_source": "Orders table"},
         ]
     )
-    render_section_title("🧾", "Company Data Contract", "The feature contract needed to use the platform with production data.")
+    render_section_title("ðŸ§¾", "Company Data Contract", "The feature contract needed to use the platform with production data.")
     render_card_start()
-    st.dataframe(schema, use_container_width=True, hide_index=True)
+    st.dataframe(schema, width="stretch", hide_index=True)
 
     st.markdown("#### Example feature formulas")
     formulas = pd.DataFrame(
@@ -1522,7 +1977,7 @@ def render_data_contract() -> None:
             {"metric": "order_value_std", "formula": "standard deviation of historical order amount"},
         ]
     )
-    st.dataframe(formulas, use_container_width=True, hide_index=True)
+    st.dataframe(formulas, width="stretch", hide_index=True)
     render_card_end()
 
 
@@ -1564,17 +2019,17 @@ def render_model_performance(result: PipelineResult) -> None:
         ]
     )
 
-    render_section_title("🧠", "Model Performance", "Diagnostics for churn classification and spend forecasting.")
+    render_section_title("ðŸ§ ", "Model Performance", "Diagnostics for churn classification and spend forecasting.")
     left, right = st.columns(2)
     with left:
         render_card_start()
         st.markdown("#### Churn model")
-        st.dataframe(churn_metrics, use_container_width=True, hide_index=True)
+        st.dataframe(churn_metrics, width="stretch", hide_index=True)
         render_card_end()
     with right:
         render_card_start()
         st.markdown("#### Spend model")
-        st.dataframe(spend_metrics, use_container_width=True, hide_index=True)
+        st.dataframe(spend_metrics, width="stretch", hide_index=True)
         render_card_end()
 
     st.markdown(
@@ -1587,9 +2042,9 @@ def main() -> None:
     """Render the Streamlit dashboard."""
 
     inject_global_css()
-    with st.status("📊 Building customer intelligence pipeline...", expanded=False) as status:
-        st.write("🧠 Running predictive models...")
-        st.write("⚡ Generating insights...")
+    with st.status("Building customer intelligence pipeline...", expanded=False) as status:
+        st.write("Running predictive models...")
+        st.write("Generating insights...")
         result = load_pipeline_data()
         status.update(label="Pipeline ready", state="complete")
 
