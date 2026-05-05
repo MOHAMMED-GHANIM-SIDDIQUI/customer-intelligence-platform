@@ -1,103 +1,234 @@
 # Customer Intelligence Platform
 
-Premium AI-powered customer analytics SaaS built with Streamlit. The platform helps revenue, retention, and growth teams identify churn risk, prioritize customer actions, and forecast near-term revenue from a single executive workspace.
+> Predict churn, optimize retention, and maximize revenue with an AI-powered customer analytics dashboard.
 
-## What It Solves
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-red)
+![Machine Learning](https://img.shields.io/badge/ML-Customer%20Analytics-indigo)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-Companies often have customer, order, engagement, and retention data spread across disconnected systems. This app turns those signals into a practical decision layer:
+Customer Intelligence Platform is a premium Streamlit analytics application that helps businesses understand customer behavior, forecast revenue, identify churn risk, and prioritize retention actions. The project combines a modern enterprise SaaS-style interface with a modular Python analytics backend and an end-to-end customer scoring workflow.
 
-- Which customers are most likely to churn?
-- How much revenue is exposed?
-- Which customer segments need attention?
-- What retention action should the business take next?
-- Can teams score new customer data without rebuilding the ML pipeline?
+## Preview
 
-## Core Capabilities
+The application is designed to feel like a polished enterprise analytics product:
 
-- Customer segmentation using behavioral and transaction features
-- Churn probability scoring
-- Next-month revenue prediction
-- Revenue-at-risk prioritization
-- Business-rule configuration for risk thresholds and CRM actions
-- Executive KPI dashboard
-- Retention priority queue
-- Manual customer what-if scoring
-- CSV upload scoring with column mapping
-- Data contract for onboarding company datasets
-
-## Product Experience
-
-The UI is designed as an enterprise analytics product, not a notebook demo:
-
-- Dark premium SaaS theme
+- Dark AI SaaS interface
 - Executive KPI cards
-- Decision-focused dashboard sections
-- Risk distribution and top-risk customer views
-- Styled sidebar control panel
-- CRM-ready action recommendations
-- Streamlit-native components for reliable rendering
+- Customer segmentation insights
+- Churn and revenue-at-risk monitoring
+- Retention action recommendations
+- Manual and CSV-based customer scoring
+- Business rule configuration for risk thresholds and CRM actions
+
+## What It Does
+
+Customer Intelligence Platform helps revenue, retention, and growth teams turn customer data into action. It generates or scores customer-level features, segments customers by behavior, predicts churn probability, forecasts next-month spend, and recommends business actions based on configurable risk thresholds.
+
+Supported workflows:
+
+- Explore demo customer intelligence data
+- Filter customers by country, segment, risk, age, and predicted spend
+- Review revenue-at-risk breakdowns
+- Prioritize high-risk customers for retention action
+- Score a single custom customer profile
+- Upload company CSV data and map columns to the model feature contract
+- Download scored customer results for CRM or growth operations
+
+## Core Features
+
+| Area | Feature |
+| --- | --- |
+| UI/UX | Premium Streamlit interface with dark theme, executive layout, styled metrics, and decision-focused sections |
+| Segmentation | KMeans-based customer segments using behavioral and transaction-level features |
+| Churn | Churn probability scoring with configurable low, medium, and high-risk thresholds |
+| Revenue | Next-month spend prediction and revenue-at-risk prioritization |
+| Actions | CRM-ready recommendations such as nurture, engagement campaign, and retention offer review |
+| Data Upload | CSV upload scoring with company column mapping |
+| Reliability | Cached pipeline execution, modular code organization, validation, and Streamlit-native KPI rendering |
+| Deployment | Ready for Streamlit Community Cloud from the root `app.py` entrypoint |
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A["Customer Profile Data"] --> C["Feature Engineering"]
+    B["Transaction Data"] --> C
+    C --> D["Customer Modeling Table"]
+    D --> E["Customer Segmentation"]
+    D --> F["Churn Prediction"]
+    D --> G["Revenue Forecasting"]
+    E --> H["Customer Actions Table"]
+    F --> H
+    G --> H
+    H --> I["Business Rules"]
+    I --> J["Streamlit Dashboard"]
+    K["Manual Entry / CSV Upload"] --> L["Scoring Workflow"]
+    L --> J
+```
 
 ## Project Structure
 
 ```text
-.
-├── app.py
-├── requirements.txt
-├── run_pipeline.py
-├── CASE_STUDY_DS.ipynb
+customer-intelligence-platform/
+├── app.py                         # Streamlit UI, dashboard layout, filters, scoring workflows
+├── run_pipeline.py                # CLI runner for the analytics pipeline
+├── requirements.txt               # Runtime dependencies
+├── CASE_STUDY_DS.ipynb            # Original case-study notebook
+├── README.md                      # Project documentation
 └── src/
     └── customer_analytics/
-        ├── config.py
-        ├── data_generation.py
-        ├── evaluation.py
-        ├── features.py
-        ├── modeling.py
-        ├── pipeline.py
-        └── segmentation.py
+        ├── __init__.py
+        ├── config.py              # Shared configuration, feature lists, sample sizes
+        ├── data_generation.py     # Synthetic customer and transaction data generation
+        ├── evaluation.py          # Classification and regression metrics
+        ├── features.py            # Customer-level feature engineering
+        ├── modeling.py            # Churn and spend model training
+        ├── pipeline.py            # End-to-end orchestration and scored actions
+        └── segmentation.py        # Customer segmentation workflow
 ```
 
-## Local Setup
+## Execution Flow
+
+1. Streamlit starts from `app.py`.
+2. The app loads custom CSS, the hero section, sidebar control panel, and dashboard tabs.
+3. `load_pipeline_data()` runs the cached analytics pipeline.
+4. `run_pipeline()` generates customer data, transaction data, features, segments, churn scores, spend forecasts, and recommended actions.
+5. Business rules apply configurable risk thresholds and action labels.
+6. Sidebar filters narrow the customer population.
+7. Dashboard tabs render executive KPIs, risk distribution, revenue-at-risk breakdowns, segment views, customer tables, scoring workflows, and model diagnostics.
+8. Users can manually score a customer profile or upload CSV data for bulk scoring.
+
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/MOHAMMED-GHANIM-SIDDIQUI/customer-intelligence-platform.git
+cd customer-intelligence-platform
+```
+
+### 2. Create a virtual environment
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+```bash
+# Windows
+.venv\Scripts\activate
+
+# macOS / Linux
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
-streamlit run app.py
 ```
 
-Then open:
+### 4. Run the app
+
+```bash
+python -m streamlit run app.py
+```
+
+The app will open locally at:
 
 ```text
 http://localhost:8501
 ```
 
-## Streamlit Cloud Deployment
+## Run the Pipeline
 
-Use these settings in Streamlit Community Cloud:
+To execute the analytics pipeline from the command line:
 
-- Repository: `MOHAMMED-GHANIM-SIDDIQUI/customer-intelligence-platform`
-- Branch: `master`
-- Main file path: `app.py`
-- Python version: `3.12`
+```bash
+python run_pipeline.py
+```
 
-Dependencies are declared in `requirements.txt`.
+This prints:
 
-## Using Company Data
+- segment profile
+- churn model metrics
+- spend forecast metrics
+- sample customer actions
 
-Use the **Score New Data** workflow to upload customer data and map your company columns to the model feature contract. Required fields include:
+## Deployment on Streamlit Community Cloud
 
-- `income`
-- `tenure_months`
-- `visits_per_month`
-- `total_orders`
-- `total_spend`
-- `average_order_value`
-- `discount_rate`
-- `recency_days`
-- `orders_per_active_month`
-- `spend_per_visit`
-- `order_value_std`
+This repository is ready to deploy on Streamlit Community Cloud.
 
-The app then outputs segment, churn probability, predicted spend, revenue at risk, risk level, and recommended retention action.
+Use these deployment settings:
 
-## Production Note
+| Setting | Value |
+| --- | --- |
+| Repository | `MOHAMMED-GHANIM-SIDDIQUI/customer-intelligence-platform` |
+| Branch | `master` |
+| Main file path | `app.py` |
+| Dependency file | `requirements.txt` |
 
-The current project is based on a synthetic case-study pipeline. For production use, retrain the models on real historical customer outcomes, validated churn labels, and company-specific revenue definitions.
+Deploy from:
+
+https://share.streamlit.io
+
+## Data Notes
+
+The current project uses synthetic case-study data to demonstrate the product workflow. In a production environment, the same interface should be connected to company systems such as:
+
+- CRM/customer profile tables
+- orders and payment systems
+- subscription or lifecycle data
+- web/app analytics
+- marketing engagement tables
+- support or customer success history
+
+For stronger production accuracy, future versions can add:
+
+- model retraining on real churn labels
+- calibrated churn probability thresholds
+- customer lifetime value modeling
+- automated data quality checks
+- CRM integration for action export
+- monitoring for drift and model performance
+
+## Production Readiness Checklist
+
+- Modular code structure
+- Cached Streamlit pipeline execution
+- Premium enterprise dashboard UI
+- Business rule controls
+- Customer filtering and exploration
+- Manual scoring workflow
+- CSV upload scoring workflow
+- Data contract for company onboarding
+- GitHub-ready README
+- Streamlit Cloud deployment settings
+- Automated tests
+- CI checks
+- Model monitoring
+- Production retraining pipeline
+
+## Tech Stack
+
+- Python
+- Streamlit
+- pandas
+- NumPy
+- scikit-learn
+- Matplotlib
+- Seaborn
+
+## Author
+
+Built by Mohammed Ghanim Siddiqui.
+
+## Acknowledgement
+
+This project was rebuilt from a customer analytics case-study notebook into a cleaner, modular, enterprise-ready Streamlit application with a modern AI SaaS-style user experience.
+
+## About
+
+AI-powered customer intelligence dashboard for segmentation, churn prediction, revenue forecasting, and retention action planning.
